@@ -1,0 +1,6 @@
+@ConaApi_HostAddress = http://localhost:5135
+
+GET {{ConaApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
