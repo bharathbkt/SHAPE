@@ -18,16 +18,33 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public ActionResult<string> Login([FromBody] LoginRequest request)
+    public ActionResult<string> Login([FromBody] AuthRequest request)
     {
         // TODO: Implement actual user validation against a database
-        // This is a simplified example that accepts any username/password
+        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+        {
+            return BadRequest("Email and password are required");
+        }
         
-        var token = GenerateJwtToken(request.Username);
+        var token = GenerateJwtToken(request.Email);
         return Ok(new { token });
     }
 
-    private string GenerateJwtToken(string userId)
+    [HttpPost("register")]
+    public ActionResult<string> Register([FromBody] AuthRequest request)
+    {
+        // TODO: Implement actual user registration in a database
+        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+        {
+            return BadRequest("Email and password are required");
+        }
+
+        // For now, just return a token like login
+        var token = GenerateJwtToken(request.Email);
+        return Ok(new { token });
+    }
+
+    private string GenerateJwtToken(string email)
     {
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? 
@@ -37,7 +54,8 @@ public class AuthController : ControllerBase
 
         var claims = new[]
         {
-            new Claim("sub", userId),
+            new Claim("sub", email),
+            new Claim("email", email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -54,8 +72,8 @@ public class AuthController : ControllerBase
     }
 }
 
-public class LoginRequest
+public class AuthRequest
 {
-    public string Username { get; set; }
+    public string Email { get; set; }
     public string Password { get; set; }
 }

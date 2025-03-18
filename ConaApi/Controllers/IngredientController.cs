@@ -31,8 +31,7 @@ public class IngredientController : ControllerBase
         if (request.Ingredients == null || !request.Ingredients.Any())
             return BadRequest("No ingredients provided");
 
-        // Get user ID from the JWT token claim
-        var userId = User.FindFirst("sub")?.Value;
+        var userId = User.FindFirst("email")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
@@ -84,7 +83,7 @@ public class IngredientController : ControllerBase
     [HttpGet("recipes")]
     public async Task<ActionResult<IEnumerable<Recipe>>> GetRecipes()
     {
-        var userId = User.FindFirst("sub")?.Value;
+        var userId = User.FindFirst("email")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
@@ -95,18 +94,41 @@ public class IngredientController : ControllerBase
         return Ok(recipes);
     }
 
-    [HttpPost("save-recipe")]
-    public async Task<ActionResult<Recipe>> SaveRecipe([FromBody] Recipe recipe)
+    [HttpGet("recipes/{id}")]
+    public async Task<ActionResult<Recipe>> GetRecipeById(string id)
     {
-        var userId = User.FindFirst("sub")?.Value;
+        var userId = User.FindFirst("email")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        if (string.IsNullOrEmpty(recipe.Name))
-            return BadRequest("Recipe name is required");
+        var recipe = await _recipeCollection
+            .Find(r => r.Id == id && r.UserId == userId)
+            .FirstOrDefaultAsync();
+
+        if (recipe == null)
+            return NotFound();
+
+        return Ok(recipe);
+    }
+
+    [HttpPost("recipes")]
+    public async Task<ActionResult<Recipe>> SaveRecipe([FromBody] Recipe recipe)
+    {
+        var userId = User.FindFirst("email")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        if (string.IsNullOrEmpty(recipe.Title))
+            return BadRequest("Recipe title is required");
 
         recipe.Id = Guid.NewGuid().ToString();
         recipe.UserId = userId;
+
+        // Generate description if not provided
+        if (string.IsNullOrEmpty(recipe.Description))
+        {
+            recipe.Description = $"A delicious recipe with {string.Join(", ", recipe.Ingredients)}";
+        }
 
         await _recipeCollection.InsertOneAsync(recipe);
         return Ok(recipe);
